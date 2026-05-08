@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype D3 - Auto-routing-schemas</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <aside class="shape-library" aria-label="Bibliothèque de formes">
+    <h2>Formes</h2>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="team">
+      <span class="shape-swatch rounded-rect"></span>
+      Rectangle arrondi
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="process">
+      <span class="shape-swatch rect"></span>
+      Rectangle
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="decision">
+      <span class="shape-swatch diamond"></span>
+      Losange
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="document">
+      <span class="shape-swatch document"></span>
+      Document
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="square">
+      <span class="shape-swatch square"></span>
+      Carre
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="circle">
+      <span class="shape-swatch circle"></span>
+      Cercle
+    </button>
+    <button class="shape-palette-item" type="button" draggable="true" data-shape-type="text">
+      <span class="shape-swatch text"></span>
+      Texte
+    </button>
+    <div id="custom-shape-list" class="custom-shape-list"></div>
+    <form id="custom-shape-form" class="custom-shape-form">
+      <h3>Importer</h3>
+      <label>
+        Nom
+        <input id="custom-shape-name" type="text" placeholder="Nom de la forme">
+      </label>
+      <label>
+        Fichier
+        <input id="custom-shape-file" type="file" accept="image/*,.svg">
+      </label>
+      <button id="add-custom-shape" type="submit">Ajouter à la bibliothèque</button>
+    </form>
+  </aside>
+
+  <div class="toolbar">
+    <button id="select-tool" class="tool-button active" type="button" aria-pressed="true" title="Selectionner">Selection</button>
+    <button id="pan-tool" class="tool-button" type="button" aria-pressed="false" title="Se deplacer">Main</button>
+    <button id="reset-layout" type="button">R&eacute;organiser</button>
+    <button id="fit-view" type="button">Centrer</button>
+    <button id="export-graph" type="button">Exporter JSON</button>
+    <button id="import-graph" type="button">Importer JSON</button>
+    <input id="import-graph-input" class="hidden-file-input" type="file" accept="application/json,.json">
+    <button id="export-image" type="button">Exporter image</button>
+    <button id="hide-ath" type="button">Masquer ATH</button>
+  </div>
+  <div class="page-tabs-bar">
+    <button id="page-back" type="button" disabled>Back</button>
+    <div id="page-tabs" class="page-tabs"></div>
+  </div>
+
+  <button id="show-ath" class="ath-restore hidden" type="button">Afficher ATH</button>
+  <div id="zoom-indicator" class="zoom-indicator" aria-live="polite">
+    <span id="zoom-label">100%</span>
+    <input id="zoom-slider" class="zoom-slider" type="range" aria-label="Echelle de zoom">
+  </div>
+
+  <svg id="canvas" aria-label="Prototype de sch&eacute;ma organisationnel"></svg>
+
+  <aside class="inspector" aria-label="Inspecteur de forme">
+    <h2>Inspecteur</h2>
+    <div id="empty-inspector" class="empty-inspector">
+      <p>Selectionne une forme ou une relation.</p>
+      <label>
+        Fond du canvas
+        <input id="canvas-background" type="color" value="#f6f7f9">
+      </label>
+      <label class="checkbox-label">
+        <input id="canvas-grid-enabled" type="checkbox" checked>
+        Grille
+      </label>
+      <label>
+        Relations
+        <select id="route-style">
+          <option value="straight">Ligne droite</option>
+          <option value="orthogonal">Flasque</option>
+        </select>
+      </label>
+      <button id="reset-canvas-background" type="button">Reset fond</button>
+    </div>
+    <form id="node-inspector" class="node-inspector hidden">
+      <div id="selection-summary" class="selection-summary"></div>
+      <label>
+        Texte
+        <textarea id="node-label" rows="3"></textarea>
+      </label>
+      <label>
+        Largeur
+        <input id="node-width" type="number" min="80" max="1200" step="10">
+      </label>
+      <label>
+        Hauteur
+        <input id="node-height" type="number" min="42" max="900" step="6">
+      </label>
+      <label>
+        Taille texte
+        <input id="node-font-size" type="number" min="8" max="32" step="1">
+      </label>
+      <div class="text-style-tools">
+        <label class="checkbox-label">
+          <input id="node-font-bold" type="checkbox">
+          Gras
+        </label>
+        <label class="checkbox-label">
+          <input id="node-font-italic" type="checkbox">
+          Italique
+        </label>
+        <label class="checkbox-label">
+          <input id="node-font-underline" type="checkbox">
+          Souligne
+        </label>
+        <label class="checkbox-label">
+          <input id="node-font-strike" type="checkbox">
+          Barre
+        </label>
+      </div>
+      <label>
+        Alignement horizontal
+        <select id="node-text-align">
+          <option value="left">Gauche</option>
+          <option value="center">Centre</option>
+          <option value="right">Droite</option>
+        </select>
+      </label>
+      <label>
+        Alignement vertical
+        <select id="node-text-valign">
+          <option value="top">Haut</option>
+          <option value="middle">Milieu</option>
+          <option value="bottom">Bas</option>
+        </select>
+      </label>
+      <label class="checkbox-label hidden" id="node-image-crop-wrap">
+        <input id="node-image-crop" type="checkbox">
+        Rogner image
+      </label>
+      <label class="hidden" id="node-image-zoom-wrap">
+        Zoom image
+        <input id="node-image-zoom" type="number" min="0.2" max="6" step="0.05">
+      </label>
+      <label class="hidden" id="node-image-offset-x-wrap">
+        Decalage X
+        <input id="node-image-offset-x" type="number" min="-1000" max="1000" step="1">
+      </label>
+      <label class="hidden" id="node-image-offset-y-wrap">
+        Decalage Y
+        <input id="node-image-offset-y" type="number" min="-1000" max="1000" step="1">
+      </label>
+      <label>
+        Fond
+        <input id="node-fill" type="color">
+      </label>
+      <div class="color-tools" data-color-target="fill">
+        <div id="node-fill-palette" class="color-palette" aria-label="Palette de fonds"></div>
+        <div class="color-history-label">Historique</div>
+        <div id="node-fill-history" class="color-history" aria-label="Historique des fonds"></div>
+      </div>
+      <label>
+        Contour
+        <input id="node-stroke" type="color">
+      </label>
+      <div class="color-tools" data-color-target="stroke">
+        <div id="node-stroke-palette" class="color-palette" aria-label="Palette de contours"></div>
+        <div class="color-history-label">Historique</div>
+        <div id="node-stroke-history" class="color-history" aria-label="Historique des contours"></div>
+      </div>
+      <label>
+        Style CSS forme
+        <textarea id="node-shape-css" rows="7" spellcheck="false"></textarea>
+      </label>
+      <button id="toggle-node-lock" type="button">Verrouiller</button>
+      <button id="start-link" type="button">Ajouter relation</button>
+      <button id="add-selected-to-library" type="button">Ajouter a la bibliotheque</button>
+      <button id="open-subschema" type="button">Creer sous-schema</button>
+      <button id="delete-node" class="danger-button" type="button">Supprimer forme</button>
+    </form>
+    <section id="link-inspector" class="link-inspector hidden">
+      <div class="relation-summary">
+        <span id="link-source-label"></span>
+        <span id="link-direction" aria-hidden="true">-></span>
+        <span id="link-target-label"></span>
+      </div>
+      <label>
+        Couleur
+        <input id="link-color" type="color">
+      </label>
+      <label>
+        Epaisseur
+        <input id="link-width" type="number" min="1" max="10" step="1">
+      </label>
+      <label class="checkbox-label">
+        <input id="link-dashed" type="checkbox">
+        Pointille
+      </label>
+      <label>
+        Debut
+        <select id="link-start-marker"></select>
+      </label>
+      <label>
+        Fin
+        <select id="link-end-marker"></select>
+      </label>
+      <button id="delete-link" class="danger-button" type="button">Supprimer relation</button>
+    </section>
+  </aside>
+
+  <script src="js/config.js"></script>
+  <script src="js/sample-graph.js"></script>
+  <script src="js/geometry.js"></script>
+  <script src="js/svg-path.js"></script>
+  <script src="js/graph-store.js"></script>
+  <script src="js/orthogonal-router.js"></script>
+  <script src="js/diagram-renderer.js"></script>
+  <script src="js/diagram-renderer-ui.js"></script>
+  <script src="js/diagram-renderer-interactions.js"></script>
+  <script src="js/diagram-renderer-routing.js"></script>
+  <script src="js/diagram-io.js"></script>
+  <script src="js/diagram-app.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
